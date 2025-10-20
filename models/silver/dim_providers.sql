@@ -34,4 +34,4 @@ select
     reh_conversion_date
 
 from
-    {{ ref('stg_cms_enrollments') }}
+    {{ ref('stg_hospital_enrollments') }}
