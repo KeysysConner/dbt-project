@@ -33,7 +33,7 @@ with source as (
         is_subgroup_other,
         subgroup_other_text
     from
-        {{ ref('stg_cms_enrollments') }}
+        {{ ref('stg_hospital_enrollments') }}
 ),
 
 unpivoted as (
