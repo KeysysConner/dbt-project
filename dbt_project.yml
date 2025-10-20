@@ -37,6 +37,12 @@ clean-targets:         # directories to be removed by `dbt clean`
 
 models:
   my_new_project:
-    # Applies to all files under models/example/
-    example:
-      +materialized: table
+    # All models in the 'staging' folder
+    staging:
+      +schema: STAGING       # Will build in STAGING schema
+      +materialized: view    # Default staging models to views
+    
+    # All models in the 'silver' folder
+    silver:
+      +schema: SILVER        # Will build in SILVER schema
+      +materialized: table   # Default silver models to tables
