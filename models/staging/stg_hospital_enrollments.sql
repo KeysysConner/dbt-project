@@ -12,24 +12,23 @@ with source as (
 
 ),
 
--- NEW STEP: Parse the raw text content into a queryable JSON object
-parsed as (
+-- STEP 1: Safely parse the JSON using TRY_PARSE_JSON
+-- This will return NULL if the JSON is malformed (e.g., "multiple documents")
+safely_parsed as (
 
     select
-        PARSE_JSON(raw_content) as parsed_content,
+        TRY_PARSE_JSON(raw_content) as parsed_content,
         file_name,
         loaded_at
     from source
-    -- This check prevents errors if a file is not valid JSON
-    where TRY_PARSE_JSON(raw_content) is not null 
-
 ),
 
+-- STEP 2: Filter out rows that failed parsing
+-- and then extract fields from the valid JSON.
 renamed_and_casted as (
 
     select
         -- Identifiers
-        -- We now query from 'parsed_content', not 'raw_content'
         parsed_content:"ENROLLMENT ID"::string as enrollment_id,
         parsed_content:"NPI"::string as npi,
         parsed_content:"CCN"::string as ccn,
@@ -84,7 +83,8 @@ renamed_and_casted as (
         file_name,
         loaded_at
 
-    from parsed -- Select from the new 'parsed' CTE
+    from safely_parsed
+    where parsed_content is not null -- This is the filter that will skip the bad rows
 
 )
 
