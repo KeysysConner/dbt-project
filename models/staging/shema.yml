@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: 'raw_staging'
+    database: RAW_DATA
+    schema: STAGING
+    tables:
+      - name: POC_RAW_DATA
+        columns:
+          - name: raw_content
+            description: "The raw file content (CSV or JSON) loaded as a VARIANT."
+          - name: file_name
+            description: "The name of the ingested file."
+          - name: loaded_at
+            description: "The timestamp when the file was loaded."
