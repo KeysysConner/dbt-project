@@ -45,8 +45,11 @@ with source as (
         {{ ref('stg_hospital_enrollments') }}
 
     {% if is_incremental() %}
-      -- This filter processes only new records based on the raw file load time
-      where loaded_at > (select max(loaded_at) from {{ this }})
+      -- This creates a variable holding the max timestamp from the table *before* the run
+      {% set max_loaded_at = "(select max(loaded_at) from {{ this }})" %}
+      
+      -- This filters the new data to only append rows newer than that timestamp
+      where loaded_at > {{ max_loaded_at }}
     {% endif %}
 ),
 
