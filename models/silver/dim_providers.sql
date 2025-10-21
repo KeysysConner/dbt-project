@@ -1,4 +1,4 @@
-{{
+={{
   config(
     materialized='incremental',
     schema='SILVER',
@@ -7,10 +7,18 @@
 }}
 
 with source_data as (
+
     select * from {{ ref('stg_hospital_enrollments') }}
+
+    {% if is_incremental() %}
+    -- We filter the source data here, BEFORE any joins or logic
+    where loaded_at > (select max(loaded_at) from {{ this }})
+    {% endif %}
+
 ),
 
 final as (
+
     select
         -- Primary Keys
         enrollment_id,
@@ -55,8 +63,3 @@ final as (
 )
 
 select * from final
-
--- The incremental logic is moved here, to the very end of the query --
-{% if is_incremental() %}
-  where loaded_at > (select max(loaded_at) from {{ this }})
-{% endif %}
