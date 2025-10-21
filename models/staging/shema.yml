@@ -10,6 +10,17 @@ sources:
           - name: raw_content
             description: "The raw file content (CSV or JSON) loaded as a VARIANT."
           - name: file_name
-            description: "The name of the ingested file."
+            description: "The name of the ingested file (assumed to be the URL)."
           - name: loaded_at
             description: "The timestamp when the file was loaded."
+
+  - name: 'config'
+    database: RAW_DATA
+    schema: CONFIG
+    tables:
+      - name: DATA_SOURCES
+        columns:
+          - name: ID
+            description: "The unique ID for the data source."
+          - name: SOURCE_URL
+            description: "The URL the orchestrator pulls from."

@@ -1,3 +1,10 @@
+{{
+  config(
+    materialized='table',
+    schema='SILVER'
+  )
+}}
+
 select distinct
     provider_type_code,
     provider_type_text

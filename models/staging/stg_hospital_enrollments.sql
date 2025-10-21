@@ -4,30 +4,38 @@
   )
 }}
 
-with source as (
-
+with source_data as (
     select * from {{ source('raw_staging', 'POC_RAW_DATA') }}
     -- This filter ensures you are only processing hospital enrollment files
+    -- You might make this filter dynamic based on the config table in the future
     where lower(file_name) like '%hospital_enrollments%'
-
 ),
 
--- STEP 1: Safely parse the JSON using TRY_PARSE_JSON
--- This will return NULL if the JSON is malformed (e.g., "multiple documents")
+source_config as (
+    select * from {{ source('config', 'DATA_SOURCES') }}
+),
+
+-- Safely parse the JSON using TRY_PARSE_JSON
 safely_parsed as (
-
     select
-        TRY_PARSE_JSON(raw_content) as parsed_content,
-        file_name,
-        loaded_at
-    from source
+        TRY_PARSE_JSON(source_data.raw_content) as parsed_content,
+        source_data.file_name,
+        source_data.loaded_at,
+        config.ID as data_source_id  -- <<<<<<<<<<<<<<<< KEY ADDITION
+    from source_data
+    -- Join to get the data_source_id. We assume file_name is the URL.
+    left join source_config as config
+        on source_data.file_name = config.SOURCE_URL
+    where 
+        parsed_content is not null -- Filter out bad JSON
 ),
 
--- STEP 2: Filter out rows that failed parsing
--- and then extract fields from the valid JSON.
 renamed_and_casted as (
-
     select
+        data_source_id,
+        file_name,
+        loaded_at,
+
         -- Identifiers
         parsed_content:"ENROLLMENT ID"::string as enrollment_id,
         parsed_content:"NPI"::string as npi,
@@ -63,7 +71,7 @@ renamed_and_casted as (
         (parsed_content:"REH CONVERSION FLAG"::string = 'Y') as is_reh_conversion,
         try_to_date(parsed_content:"REH CONVERSION DATE"::string, 'MM/DD/YYYY') as reh_conversion_date,
 
-        -- Subgroup Flags (to be unpivoted later)
+        -- Subgroup Flags
         (parsed_content:"SUBGROUP - GENERAL"::string = 'Y') as is_subgroup_general,
         (parsed_content:"SUBGROUP - ACUTE CARE"::string = 'Y') as is_subgroup_acute_care,
         (parsed_content:"SUBGROUP - ALCOHOL DRUG"::string = 'Y') as is_subgroup_alcohol_drug,
@@ -77,15 +85,9 @@ renamed_and_casted as (
         (parsed_content:"SUBGROUP - REHABILITATION UNIT"::string = 'Y') as is_subgroup_rehabilitation_unit,
         (parsed_content:"SUBGROUP - SPECIALTY HOSPITAL"::string = 'Y') as is_subgroup_specialty_hospital,
         (parsed_content:"SUBGROUP - OTHER"::string = 'Y') as is_subgroup_other,
-        parsed_content:"SUBGROUP - OTHER TEXT"::string as subgroup_other_text,
-
-        -- Metadata
-        file_name,
-        loaded_at
+        parsed_content:"SUBGROUP - OTHER TEXT"::string as subgroup_other_text
 
     from safely_parsed
-    where parsed_content is not null -- This is the filter that will skip the bad rows
-
 )
 
 select * from renamed_and_casted

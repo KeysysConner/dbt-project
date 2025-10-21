@@ -1,3 +1,11 @@
+{{
+  config(
+    materialized='incremental',
+    schema='SILVER',
+    incremental_strategy='append'
+  )
+}}
+
 {% set subgroup_columns = [
     ('is_subgroup_general', 'General'),
     ('is_subgroup_acute_care', 'Acute Care'),
@@ -17,7 +25,8 @@ with source as (
     select
         npi,
         ccn,
-        -- Bring all subgroup flags
+        data_source_id,
+        loaded_at,
         is_subgroup_general,
         is_subgroup_acute_care,
         is_subgroup_alcohol_drug,
@@ -34,6 +43,11 @@ with source as (
         subgroup_other_text
     from
         {{ ref('stg_hospital_enrollments') }}
+
+    {% if is_incremental() %}
+      -- This filter processes only new records based on the raw file load time
+      where loaded_at > (select max(loaded_at) from {{ this }})
+    {% endif %}
 ),
 
 unpivoted as (
@@ -43,6 +57,8 @@ unpivoted as (
     select
         npi,
         ccn,
+        data_source_id,
+        loaded_at,
         '{{ type_name }}' as subgroup_type,
         null as subgroup_text
     from source
@@ -55,6 +71,8 @@ unpivoted as (
     select
         npi,
         ccn,
+        data_source_id,
+        loaded_at,
         'Other' as subgroup_type,
         subgroup_other_text
     from source
