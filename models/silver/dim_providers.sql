@@ -1,3 +1,11 @@
+{{
+  config(
+    materialized='incremental',
+    schema='SILVER',
+    incremental_strategy='append'
+  )
+}}
+
 select
     -- Primary Keys
     enrollment_id,
@@ -31,7 +39,18 @@ select
     -- Other Flags
     is_multiple_npi,
     is_reh_conversion,
-    reh_conversion_date
+    reh_conversion_date,
+
+    -- Metadata for tracking
+    data_source_id,
+    loaded_at
 
 from
     {{ ref('stg_hospital_enrollments') }}
+
+{% if is_incremental() %}
+
+  -- This filter appends only new records based on the raw file load time
+  where loaded_at > (select max(loaded_at) from {{ this }})
+
+{% endif %}
