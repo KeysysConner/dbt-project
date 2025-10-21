@@ -1,4 +1,4 @@
-={{
+{{
   config(
     materialized='incremental',
     schema='SILVER',
@@ -6,19 +6,19 @@
   )
 }}
 
+-- This block runs before the main query --
+{% if is_incremental() %}
+  {% set max_loaded_at_query %}
+    select max(loaded_at) from {{ this }}
+  {% endset %}
+  {% set max_loaded_at = run_query(max_loaded_at_query).columns[0].values()[0] %}
+{% endif %}
+
 with source_data as (
-
     select * from {{ ref('stg_hospital_enrollments') }}
-
-    {% if is_incremental() %}
-    -- We filter the source data here, BEFORE any joins or logic
-    where loaded_at > (select max(loaded_at) from {{ this }})
-    {% endif %}
-
 ),
 
 final as (
-
     select
         -- Primary Keys
         enrollment_id,
@@ -60,6 +60,12 @@ final as (
 
     from
         source_data
+
+    -- This clause is now at the end and uses the Jinja variable
+    -- It will compile to: where loaded_at > '2025-10-21 16:30:00.000'
+    {% if is_incremental() %}
+    where loaded_at > '{{ max_loaded_at }}'
+    {% endif %}
 )
 
 select * from final

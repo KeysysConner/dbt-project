@@ -6,6 +6,14 @@
   )
 }}
 
+-- This block runs before the main query --
+{% if is_incremental() %}
+  {% set max_loaded_at_query %}
+    select max(loaded_at) from {{ this }}
+  {% endset %}
+  {% set max_loaded_at = run_query(max_loaded_at_query).columns[0].values()[0] %}
+{% endif %}
+
 {% set subgroup_columns = [
     ('is_subgroup_general', 'General'),
     ('is_subgroup_acute_care', 'Acute Care'),
@@ -43,11 +51,6 @@ with source as (
         subgroup_other_text
     from
         {{ ref('stg_hospital_enrollments') }}
-
-    {% if is_incremental() %}
-      -- We filter the source data here, BEFORE any joins or logic
-      where loaded_at > (select max(loaded_at) from {{ this }})
-    {% endif %}
 ),
 
 unpivoted as (
@@ -80,3 +83,8 @@ unpivoted as (
 )
 
 select * from unpivoted
+
+-- This clause is now at the end and uses the Jinja variable
+{% if is_incremental() %}
+  where loaded_at > '{{ max_loaded_at }}'
+{% endif %}
