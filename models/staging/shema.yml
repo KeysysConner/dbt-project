@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: 'raw_staging'
-    database: RAW_DATA
+    database: AHCV_POC
     schema: STAGING
     tables:
       - name: POC_RAW_DATA
@@ -15,7 +15,7 @@ sources:
             description: "The timestamp when the file was loaded."
 
   - name: 'config'
-    database: RAW_DATA
+    database: AHCV_POC
     schema: CONFIG
     tables:
       - name: DATA_SOURCES
